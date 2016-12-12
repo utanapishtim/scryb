@@ -1,0 +1,15 @@
+[] pass in custom components to render for each markdown type, page, tags
+[x] render page correctly
+[] pass in custom styles for entire app
+[] write cli
+
+
+## Notes: 
+* [] cli commands: basic commands for working with publisher
+  * [] init: initialize a new publication
+  * [] ls: list articles or distribution targets
+  * [] create: create a new draft for an article
+  * [] edit: edit a draft or a published article
+  * [] publish: publsih an article
+  * [] prepreint: publish a draft as a preprint (i.e. email, sms)
+  * [] distribute: push a published article to some point of distribution (static html, medium, twitter)
