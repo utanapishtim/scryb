@@ -6,8 +6,8 @@ const Tag = ({ tag }) => (<div>{tag}</div>)
 
 const EntryNav = ({ last, next }) => (
   <div id="entry-nav">
-    {() => (last) ? <a id="last" href={last.href}>{last.title}</a> : undefined}
-    {() => (next) ? <a id="next" href={next.href}>{next.title}</a> : undefined}
+    {(last) ? <a id="last" href={last.href}>Last: {last.title}</a> : undefined}
+    {(next) ? <a id="next" href={next.href}>Next: {next.title}</a> : undefined}
   </div>
 )
 
@@ -26,6 +26,7 @@ const Page = ({ entry, next, last, time}) => (
         </div>
       </section>
       <footer>
+        {(last || next) ? <EntryNav last={last} next={next}/> : undefined}
       </footer>
     </body>
   </html>
