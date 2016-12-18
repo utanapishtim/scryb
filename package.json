@@ -3,20 +3,29 @@
   "version": "0.1.0",
   "description": "A component that transforms markdown to react elements",
   "main": "index.js",
+  "babel": {
+    "presets": ["es2017", "stage-0", "react"],
+    "plugins": ["add-module-exports"]
+  },
   "scripts": {
+    "build": "babel lib --out-dir bin",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next"
   },
   "author": "utanapishtim",
   "license": "ISC",
   "dependencies": {
-    "babel-preset-es2015": "^6.18.0",
-    "babel-preset-react": "^6.16.0",
-    "babel-preset-stage-0": "^6.16.0",
-    "babel-register": "^6.18.0",
-    "marked": "^0.3.6",
+    "minimist": "^1.2.0",
     "react": "^15.4.1",
     "react-dom": "^15.4.1",
+    "react-tachyons": "^0.1.2",
     "react.md": "^0.1.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-preset-es2017": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
+    "babel-preset-stage-0": "^6.16.0"
   }
 }
