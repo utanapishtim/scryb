@@ -1,91 +1,120 @@
-let createEntryData = (() => {
-  var _ref = _asyncToGenerator(function* (title, target) {
+let main = (() => {
+  var _ref = _asyncToGenerator(function* (opts, ...args) {
+    let { all, target, tags } = opts;
+
+    console.log(`[OPTIONS] all: ${ all } target: ${ target } tags: ${ tags }`);
+    console.log(`[ARGS] ${ args }`);
+
+    if (!all && args.length === 0) throw new Error(ERR_MSG_INVALID_CLI_ARGS);
+    if (!target) target = '.';
+
     const cwd = process.cwd();
-    const draftPath = path.join(cwd, `/${ hyphenate(title) }`);
-    const metadataPath = path.join(draftPath, `${ hyphenate(title) }-metadata.json`);
-    const href = path.resolve(target, `${ hyphenate(title) }.html`);
     try {
-      const promises = [yield readFile(path.join(draftPath, `${ hyphenate(title) }.md`)), yield readFile(metadataPath)];
-      const [markdown, metadata] = yield Promise.all(promises);
+      const files = yield readdir(cwd);
+      const toPublish = all ? files.filter(function (x) {
+        console.log(x);
+        return x.slice(x.length - 3) === '.md';
+      }).map(function (fileName) {
+        return {
+          title: fileName.slice(0, fileName.length - 3).split('-').join(' '),
+          path: path.join(cwd, fileName),
+          href: path.join(path.resolve(target), `${ fileName.slice(0, fileName.length - 3) }.html`)
+        };
+      }) : [{
+        title: args[0] && args[0].slice(args[0].length - 3) === '.md' ? args[0].slice(0, args[0].length - 3).split('-').join(' ') : args[0].split('-').join(' '),
+        path: path.join(cwd, `/${ hyphenate(args[0]) }.md`),
+        href: path.join(path.resolve(target), `/${ hyphenate(args[0]) }.html`),
+        tags: tags || []
+      }];
 
-      const data = Object.assign({}, metadata);
-
-      data.entry.markdown = markdown;
-      data.entry.href = href;
-
-      if (metadata.published) {
-        const { mtime } = yield stat(path.join(draftPath, `${ hyphenate(title) }.md`));
-        data.time.lastModified = mtime;
+      for (let data of toPublish) {
+        data.tsLastModified = yield stat(data.path).then(function ({ mtime }) {
+          return mtime;
+        });
+        data.markdown = yield readFile(data.path).then(function (x) {
+          return x.toString();
+        });
       }
 
-      metadata.published = true;
-      yield writeFile(metadataPath, JSON.stringify(metadata));
-
-      return data;
-    } catch (error) {
-      throw error;
+      const entryData = yield createEntryData(toPublish, { cwd, target, tags });
+      console.log(entryData.orderedTitles);
+      const htmlFiles = createHtmlFiles(target, entryData);
+      console.log(3);
+      htmlFiles.forEach(publish);
+      console.log(4);
+    } catch (e) {
+      throw e;
     }
   });
 
-  return function createEntryData(_x, _x2) {
+  return function main(_x) {
     return _ref.apply(this, arguments);
   };
 })();
 
-let filter = (() => {
-  var _ref2 = _asyncToGenerator(function* (path) {
-    let files;
+/*
+  Entry Data {
+    title
+    markdown
+    href
+    tags
+    tsPublished
+    tsLastModified
+    last
+    next
+  }
+*/
+
+
+let fetchScrybConfig = (() => {
+  var _ref2 = _asyncToGenerator(function* (target) {
     try {
-      files = yield readdir(path);
-      return files.every(function (file) {
-        return file.indexOf('.md') > -1 || file.indexOf('-metadata.json') > -1;
-      }) ? path : false;
-    } catch (err) {
-      return false;
+      return yield readFile(path.join(path.resolve(target), FILE_NAME_SCRYB_CONFIG)).then(JSON.parse);
+    } catch (error) {
+      if (error.errno === -17 || error.errno === -2) return new ScrybConfig();
+      throw error;
     }
   });
 
-  return function filter(_x3) {
+  return function fetchScrybConfig(_x2) {
     return _ref2.apply(this, arguments);
   };
 })();
 
-let createEntriesData = (() => {
-  var _ref3 = _asyncToGenerator(function* (target) {
-    const promises = [];
-    const cwd = process.cwd();
+let createEntryData = (() => {
+  var _ref3 = _asyncToGenerator(function* (toPublish, { cwd, target, tags }) {
     try {
-      const contents = yield readdir(cwd);
-      for (let i = 0; i < dirs.length; i++) {
-        promises.push(filter(path.join(cwd, contents[i])));
-      }
-      const files = yield Promise.all(promises);
-      const data = yield Promise.all(files.filter(function (x) {
-        return !!x;
-      }).map(function (title) {
-        return createEntryData(title, target);
-      }));
-      return data;
+      // fetch the scryb config
+      const config = yield fetchScrybConfig(target);
+
+      toPublish.reduce(function (entries, next) {
+        const { title } = next;
+        entries[title] = config.orderedTitles.some(function (x) {
+          return x === title;
+        }) ? handlePublished(config, next) : handleUnpublished(config, next);
+        return entries;
+      }, config.entries);
+
+      yield writeFile(path.join(path.resolve(target), FILE_NAME_SCRYB_CONFIG), JSON.stringify(config));
+
+      return config;
     } catch (error) {
       throw error;
     }
   });
 
-  return function createEntriesData(_x4) {
+  return function createEntryData(_x3, _x4) {
     return _ref3.apply(this, arguments);
   };
 })();
 
 let publish = (() => {
-  var _ref4 = _asyncToGenerator(function* ({ target, all, tags }, ...args) {
-    if (!all && args.length === 0) throw new Error(`publish command requires a title as argument:\n\n\tscryb publish <title>`);
-    const cwd = process.cwd();
-
-    const toPublish = all ? (yield readdir(cwd)).filter(function (x) {
-      return x.slice(x.length - 3) === '.md';
-    }) : [args[0]];
-
-    toPublish.map();
+  var _ref4 = _asyncToGenerator(function* ({ href, html }) {
+    try {
+      yield writeFile(href, html);
+    } catch (e) {
+      throw e;
+    }
   });
 
   return function publish(_x5) {
@@ -98,131 +127,68 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 const Page = require('./components/Page.js');
+const Index = require('./components/Index.js');
 const path = require('path');
 const fs = require('fs');
-const { promisify, hyphenate } = require('./utils');
+const { promisify, hyphenate, zip } = require('./utils');
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 const stat = promisify(fs.stat);
 const readdir = promisify(fs.readdir);
 
+const ERR_MSG_INVALID_CLI_ARGS = `
+  publish command requires a title as argument to publish single .md file:
+
+    scryb publish <title>
+
+  if you want to publish all .md files in the current dir pass the --tag option
+
+    scryb publish [-a, --all]
+`;
+
+const FILE_NAME_SCRYB_CONFIG = '.scryb-config.json';
+
 function ScrybConfig() {
-  this.entries = [];
-  this.last = '';
+  if (!(this instanceof ScrybConfig)) return new ScrybConfig();
+  this.orderedTitles = []; // titles ordered by ts of creation
+  this.entries = {}; // indexed by title
+  this.lastEntry = '';
 }
 
-function EntryData() {
-  this.title = '';
-  this.tsPublsihed = '';
-  this.tsLastModified = '';
-  this.previous = '';
-  this.next = '';
-  this.tags = [];
-  this.hash = '';
-}
+const handlePublished = (config, next) => config.entries[next.title].tags ? Object.assign({}, config.entries[next.title], next) : Object.assign({}, config.entries[next.title], next, { tags: [] });
 
-const createEntryData = (name, cb) => {
-  const uri = path.join(__dirname, '/entries', name);
-  const href = path.join(__dirname, '/static', `${ name }.html`);
-  const stat = fs.stat(uri, (err, stat) => {
-    if (err) return handleFsError(err, name.split('-').join(' '));
-    const { mtime } = fs.statSync(uri);
-    const created = new Date(fs.readFileSync(tsPath(uri, name), { encoding: 'utf8' }));
-    const markdown = fs.readFileSync(markdownPath(uri, name), { encoding: 'utf8' });
-    const tags = fs.readFileSync(tagsPath(uri, name), { encoding: 'utf8' }).split(',');
-    tags[tags.length - 1] = tags[tags.length - 1].slice(0, tags[tags.length - 1].length - 1);
-    console.log(href);
-    const data = {
-      time: {
-        lastModified: Date.valueOf.call(mtime),
-        created: Date.valueOf.call(created)
-      },
-      entry: {
-        markdown,
-        tags: tags || [],
-        title: name.split('-').join(' '),
-        href
-      }
+const handleUnpublished = (config, next) => {
+  if (config.lastEntry) {
+    next.last = {
+      title: config.lastEntry,
+      href: config.entries[config.lastEntry].href
     };
-    console.log('[INFO] data: ', JSON.stringify(data));
-    console.log('[INFO] page data created');
-    return cb(null, data);
+    config.entries[config.lastEntry].next = {
+      title: next.title,
+      href: next.href
+    };
+  }
+  config.orderedTitles.push(next.title);
+  config.lastEntry = next.title;
+  next.tsPublish = Date.now();
+  return next;
+};
+
+const createHtmlFiles = (target, { orderedTitles, entries }) => {
+  console.log(orderedTitles);
+  const x = orderedTitles.map(title => {
+    return {
+      href: entries[title].href,
+      html: ReactDOMServer.renderToStaticMarkup(React.createElement(Page, entries[title]))
+    };
+  });
+
+  console.log('foo');
+  return x.concat({
+    href: path.join(path.resolve(target), 'index.html'),
+    html: ReactDOMServer.renderToStaticMarkup(React.createElement(Index, { entries: orderedTitles.map(title => entries[title]) }))
   });
 };
 
-const createPageData = entries => {
-  if (entries.length === 1) {
-    console.log(entries[0]);return writeEntry(entries[0]);
-  }
-  console.log('no code to handle the case of entries longer thatn 1');
-};
-
-/**
- * pageData = {
- *   entry: {
- *     title: 'string',
- *     markdown: 'string',
- *     tags: ['string'],
- *     href: 'string'
- *   },
- *   time: {
- *     created: 'date',
- *     lastModified: 'date'
- *   },
- *   next: {
- *     title: 'string',
- *     href: 'string'
- *   },
- *   last: {
- *     title: 'string',
- *     href: 'string'
- *   }
- * }
- */
-const writeEntry = pageData => fs.writeFileSync(pageData.entry.href, ReactDOMServer.renderToStaticMarkup(React.createElement(Page, pageData)));
-
-if (!argv.hasOwnProperty('entry')) {
-  const entries = fs.readdirSync(path.join(__dirname, '/entries'));
-  let numEntries = entries.length;
-  const entryData = [];
-  console.log(`[INFO] ${ numEntries } articles to be published...`);
-
-  let collectEntryData = cb => (err, data) => {
-    if (err) console.log(err);
-    entryData.push(data);
-    if (--numEntries === 0) return cb(null, entryData);
-    console.log(numEntries);
-  };
-
-  let handleEntryData = (err, data) => {
-    console.log('got array with ' + data.length + ' entries');
-    if (err) console.log(err);
-    data.sort((a, b) => a.time.created > b.time.created).map((entry, i, original) => {
-      if (i === 0) {
-        entry.next = {};
-        entry.next.title = original[i + 1].entry.title;
-        entry.next.href = original[i + 1].entry.href;
-      } else if (i === original.length - 1) {
-        entry.last = {};
-        entry.last.title = original[i - 1].entry.title;
-        entry.last.href = original[i - 1].entry.href;
-      } else {
-        entry.next = {};
-        entry.last = {};
-        entry.next.title = original[i + 1].entry.title;
-        entry.next.href = original[i + 1].entry.href;
-        entry.last.title = original[i - 1].entry.title;
-        entry.last.href = original[i - 1].entry.href;
-      }
-      return entry;
-    }).forEach(writeEntry);
-  };
-
-  entries.forEach(entry => createEntryData(entry, collectEntryData(handleEntryData)));
-}
-
-if (argv.hasOwnProperty('entry')) {
-  const name = entry ? entry.split(' ').join('-') : 'test';
-  createEntryData(entry, (_, data) => createPageData([data]));
-}
+module.exports = main;

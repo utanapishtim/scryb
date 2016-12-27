@@ -25,7 +25,7 @@ const EntryNav = ({ last, next }) => React.createElement(
   ) : undefined
 );
 
-const Page = ({ entry, next, last, time }) => React.createElement(
+const Page = entry => React.createElement(
   'html',
   null,
   React.createElement(
@@ -47,12 +47,12 @@ const Page = ({ entry, next, last, time }) => React.createElement(
       React.createElement(
         'p',
         null,
-        time.created.toString()
+        entry.tsPublished
       ),
       React.createElement(
         'p',
         null,
-        time.lastModified.valueOf() !== time.created.valueOf() ? `Last Modified: ${ time.lastModified.toString() }` : undefined
+        entry.tsLastModified !== entry.tsPublished ? `Last Modified: ${ entry.tsLastModified }` : undefined
       )
     ),
     React.createElement(
@@ -68,7 +68,7 @@ const Page = ({ entry, next, last, time }) => React.createElement(
     React.createElement(
       'footer',
       null,
-      last || next ? React.createElement(EntryNav, { last: last, next: next }) : undefined
+      entry.last || entry.next ? React.createElement(EntryNav, { last: entry.last, next: entry.next }) : undefined
     )
   )
 );
