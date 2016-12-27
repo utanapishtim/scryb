@@ -1,27 +1,126 @@
+let createEntryData = (() => {
+  var _ref = _asyncToGenerator(function* (title, target) {
+    const cwd = process.cwd();
+    const draftPath = path.join(cwd, `/${ hyphenate(title) }`);
+    const metadataPath = path.join(draftPath, `${ hyphenate(title) }-metadata.json`);
+    const href = path.resolve(target, `${ hyphenate(title) }.html`);
+    try {
+      const promises = [yield readFile(path.join(draftPath, `${ hyphenate(title) }.md`)), yield readFile(metadataPath)];
+      const [markdown, metadata] = yield Promise.all(promises);
+
+      const data = Object.assign({}, metadata);
+
+      data.entry.markdown = markdown;
+      data.entry.href = href;
+
+      if (metadata.published) {
+        const { mtime } = yield stat(path.join(draftPath, `${ hyphenate(title) }.md`));
+        data.time.lastModified = mtime;
+      }
+
+      metadata.published = true;
+      yield writeFile(metadataPath, JSON.stringify(metadata));
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  return function createEntryData(_x, _x2) {
+    return _ref.apply(this, arguments);
+  };
+})();
+
+let filter = (() => {
+  var _ref2 = _asyncToGenerator(function* (path) {
+    let files;
+    try {
+      files = yield readdir(path);
+      return files.every(function (file) {
+        return file.indexOf('.md') > -1 || file.indexOf('-metadata.json') > -1;
+      }) ? path : false;
+    } catch (err) {
+      return false;
+    }
+  });
+
+  return function filter(_x3) {
+    return _ref2.apply(this, arguments);
+  };
+})();
+
+let createEntriesData = (() => {
+  var _ref3 = _asyncToGenerator(function* (target) {
+    const promises = [];
+    const cwd = process.cwd();
+    try {
+      const contents = yield readdir(cwd);
+      for (let i = 0; i < dirs.length; i++) {
+        promises.push(filter(path.join(cwd, contents[i])));
+      }
+      const files = yield Promise.all(promises);
+      const data = yield Promise.all(files.filter(function (x) {
+        return !!x;
+      }).map(function (title) {
+        return createEntryData(title, target);
+      }));
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  return function createEntriesData(_x4) {
+    return _ref3.apply(this, arguments);
+  };
+})();
+
+let publish = (() => {
+  var _ref4 = _asyncToGenerator(function* ({ target, all, tags }, ...args) {
+    if (!all && args.length === 0) throw new Error(`publish command requires a title as argument:\n\n\tscryb publish <title>`);
+    const cwd = process.cwd();
+
+    const toPublish = all ? (yield readdir(cwd)).filter(function (x) {
+      return x.slice(x.length - 3) === '.md';
+    }) : [args[0]];
+
+    toPublish.map();
+  });
+
+  return function publish(_x5) {
+    return _ref4.apply(this, arguments);
+  };
+})();
+
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
 const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 const Page = require('./components/Page.js');
 const path = require('path');
 const fs = require('fs');
+const { promisify, hyphenate } = require('./utils');
 
-const argv = require('minimist')(process.argv.slice(2));
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+const stat = promisify(fs.stat);
+const readdir = promisify(fs.readdir);
 
-const { entry } = argv;
+function ScrybConfig() {
+  this.entries = [];
+  this.last = '';
+}
 
-const handleFsError = (err, name) => {
-  console.log(err.errno);
-  switch (err.errno) {
-    case -2:
-      console.log(`[ERROR]: entry ${ name } does not exist`);
-      break;
-    default:
-      throw err;
-  }
-};
-
-const markdownPath = (uri, name) => path.join(uri, `${ name }.md`);
-const tagsPath = (uri, name) => path.join(uri, `${ name }-tags.csv`);
-const tsPath = (uri, name) => path.join(uri, `.${ name }-created-ts`);
+function EntryData() {
+  this.title = '';
+  this.tsPublsihed = '';
+  this.tsLastModified = '';
+  this.previous = '';
+  this.next = '';
+  this.tags = [];
+  this.hash = '';
+}
 
 const createEntryData = (name, cb) => {
   const uri = path.join(__dirname, '/entries', name);

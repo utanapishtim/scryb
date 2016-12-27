@@ -1,4 +1,14 @@
 [x] pass in custom components to render for each markdown type, page, tags
 [x] render page correctly
-[] pass in custom styles for entire app
-[] write cli
+[ ] pass in custom styles for entire app
+[ ] write cli
+
+# WORKFLOW
+1. create an .md file in some dir
+2. make changes to that file, ideally we have a scryb watch <filename> to live reload file in browser
+3. when you are ready to publish run scryb publish <filename> --target=<target> to publish the file
+
+basically, all .md files are untracked
+when you publish a file it gets tracked in a .scryb config
+when you publish n files at the same time the ordering is arbitrary
+when you republish a file with the same name as an existing file in the target dir, it just gets a 'last modified' section
