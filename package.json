@@ -4,14 +4,22 @@
   "description": "A component that transforms markdown to react elements",
   "main": "index.js",
   "babel": {
-    "presets": ["es2017", "stage-0", "react"],
-    "plugins": ["add-module-exports"]
+    "presets": [
+      "es2017",
+      "stage-0",
+      "react"
+    ],
+    "plugins": [
+      "add-module-exports"
+    ]
   },
   "scripts": {
+    "test": "standard",
+    "clean": "rm -r dist && rm -r .scryb && rm -r entries && rm ./*.html",
     "build": "babel lib --out-dir dist",
+    "rebuild": "npm run clean && npm run build",
     "prepublish": "npm run build",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next"
   },
   "author": "utanapishtim",
@@ -29,5 +37,8 @@
     "babel-preset-es2017": "^6.16.0",
     "babel-preset-react": "^6.16.0",
     "babel-preset-stage-0": "^6.16.0"
+  },
+  "devDependencies": {
+    "standard": "^8.6.0"
   }
 }
