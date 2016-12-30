@@ -1,12 +1,10 @@
 [x] pass in custom components to render for each markdown type, page, tags
 [x] render page correctly
-[ ] register custom components -> start with just a soft link, could copy everything over but that would prevent editing
-    [ ] index components -> index.html
-    [ ] page component   -> <entry>.html
+[x] register custom components -> start with just a soft link, could copy everything over but that would prevent editing
 [ ] write cli
     [x] publish
-    [ ] init
-    [ ] config
+    [x] init
+    [x] config
     [ ] watch
 
 # WORKFLOW
