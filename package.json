@@ -1,5 +1,5 @@
 {
-  "name": "simple-publisher",
+  "name": "scryb",
   "version": "0.1.0",
   "description": "A component that transforms markdown to react elements",
   "main": "index.js",
@@ -8,20 +8,22 @@
     "plugins": ["add-module-exports"]
   },
   "scripts": {
-    "build": "babel lib --out-dir bin",
+    "build": "babel lib --out-dir dist",
+    "prepublish": "npm run build",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next"
   },
   "author": "utanapishtim",
   "license": "ISC",
+  "bin": {
+    "scryb": "index.js"
+  },
   "dependencies": {
     "minimist": "^1.2.0",
     "react": "^15.4.1",
     "react-dom": "^15.4.1",
-    "react-tachyons": "^0.1.2",
-    "react.md": "^0.1.0"
-  },
-  "devDependencies": {
+    "react.md": "^0.1.0",
     "babel-cli": "^6.18.0",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-preset-es2017": "^6.16.0",
